@@ -1,14 +1,71 @@
 require_relative '../test_helper'
 
 class TagTest < ActiveSupport::TestCase
-  
+
+
+
+  def test_tag_initialization_for_block
+    s = '{{cms:block:identifier key1:value1 key2:value3 }}'
+    tag = ComfortableMexicanSofa::Tag.initialize_tag(s)
+    assert tag.is_a?(ComfortableMexicanSofa::Tag::Block)
+    assert_equal ({
+      'key1' => 'value1',
+      'key2' => 'value2'
+    }), tag.options
+  end
+
+  def test_tag_initialization_for_snippet
+    s = '{{cms:snippet id:foo }}'
+    tag = ComfortableMexicanSofa::Tag.initialize_tag(s)
+    assert tag.is_a?(ComfortableMexicanSofa::Tag::Snippet)
+    assert_equal ({'id' => 'foo'}), tag.options
+  end
+
+  def test_tag_options_parsing
+    assert_equal ({:key => 'val'}), ComfortableMexicanSofa::Tag.send(:parse_options, 'key:val')
+    assert_equal ({:key => 'val'}), ComfortableMexicanSofa::Tag.send(:parse_options, 'key: val')
+    assert_equal ({:key => 'val'}), ComfortableMexicanSofa::Tag.send(:parse_options, 'key : val')
+    assert_equal ({:key => 'val'}), ComfortableMexicanSofa::Tag.send(:parse_options, 'key :val')
+    assert_equal ({:key => 'val'}), ComfortableMexicanSofa::Tag.send(:parse_options, ' key : val ')
+  end
+
+  def test_tag_options_parsing_multiple
+    assert_equal ({:k1 => 'v1', :k2 => 'v2'}), ComfortableMexicanSofa::Tag.send(:parse_options, 'k1:v1,k2:v2')
+    assert_equal ({:k1 => 'v1', :k2 => 'v2'}), ComfortableMexicanSofa::Tag.send(:parse_options, 'k1:v1, k2:v2')
+    assert_equal ({:k1 => 'v1', :k2 => 'v2'}), ComfortableMexicanSofa::Tag.send(:parse_options, 'k1:v1 , k2:v2')
+  end
+
+  def test_tag_options_parsing_quoted
+    assert_equal ({:k => 'k:v'}),       ComfortableMexicanSofa::Tag.send(:parse_options, 'k:"k:v"')
+    assert_equal ({:k => 'k:v'}),       ComfortableMexicanSofa::Tag.send(:parse_options, "k:'k:v'")
+    assert_equal ({:k => 'k:v,k:v'}),   ComfortableMexicanSofa::Tag.send(:parse_options, 'k:"k:v,k:v"')
+    assert_equal ({:k => "qu'ot'ed"}),  ComfortableMexicanSofa::Tag.send(:parse_options, 'k:"qu\'ot\'ed"')
+    assert_equal ({:k => 'qu"ot"ed'}),  ComfortableMexicanSofa::Tag.send(:parse_options, "k:'qu\"ot\"ed'")
+    assert_equal ({ :k => 'quo:ted'}),  ComfortableMexicanSofa::Tag.send(:parse_options, 'k:quo":"ted')
+  end
+
+  def test_tag_options_parsing_unexpected
+    assert_equal ({ }),  ComfortableMexicanSofa::Tag.send(:parse_options, '')
+    assert_equal ({ }),  ComfortableMexicanSofa::Tag.send(:parse_options, 'k')
+    assert_equal ({ }),  ComfortableMexicanSofa::Tag.send(:parse_options, ':k')
+    assert_equal ({ :k => ''}),  ComfortableMexicanSofa::Tag.send(:parse_options, 'k:')
+    assert_equal ({ :k => ''}),  ComfortableMexicanSofa::Tag.send(:parse_options, 'k::v')
+  end
+
+
+
+
+
+
+
+
   def test_tokenizer_regex
     regex = ComfortableMexicanSofa::Tag::TOKENIZER_REGEX
-    
+
     tokens = 'text { text } text'.scan(regex)
     assert_equal nil,                   tokens[0][0]
     assert_equal 'text { text } text',  tokens[0][1]
-    
+
     tokens = 'content<{{cms:some_tag content'.scan(regex)
     assert_equal nil,                     tokens[0][0]
     assert_equal 'content<',              tokens[0][1]
@@ -16,7 +73,7 @@ class TagTest < ActiveSupport::TestCase
     assert_equal '{{',                    tokens[1][1]
     assert_equal nil,                     tokens[2][0]
     assert_equal 'cms:some_tag content',  tokens[2][1]
-    
+
     tokens = 'content<{{cms some_tag}}>content'.scan(regex)
     assert_equal nil,                     tokens[0][0]
     assert_equal 'content<',              tokens[0][1]
@@ -24,7 +81,7 @@ class TagTest < ActiveSupport::TestCase
     assert_equal '{{',                    tokens[1][1]
     assert_equal nil,                     tokens[2][0]
     assert_equal 'cms some_tag}}>content',tokens[2][1]
-    
+
     tokens = 'content<{{cms:some_tag}}>content'.scan(regex)
     assert_equal nil,                     tokens[0][0]
     assert_equal 'content<',              tokens[0][1]
@@ -32,7 +89,7 @@ class TagTest < ActiveSupport::TestCase
     assert_equal nil,                     tokens[1][1]
     assert_equal nil,                     tokens[2][0]
     assert_equal '>content',              tokens[2][1]
-    
+
     tokens = 'content<{{cms:type:label}}>content'.scan(regex)
     assert_equal nil,                     tokens[0][0]
     assert_equal 'content<',              tokens[0][1]
@@ -40,7 +97,7 @@ class TagTest < ActiveSupport::TestCase
     assert_equal nil,                     tokens[1][1]
     assert_equal nil,                     tokens[2][0]
     assert_equal '>content',              tokens[2][1]
-    
+
     tokens = 'content<{{cms:type:label }}>content'.scan(regex)
     assert_equal nil,                     tokens[0][0]
     assert_equal 'content<',              tokens[0][1]
@@ -48,7 +105,7 @@ class TagTest < ActiveSupport::TestCase
     assert_equal nil,                     tokens[1][1]
     assert_equal nil,                     tokens[2][0]
     assert_equal '>content',              tokens[2][1]
-    
+
     tokens = 'content<{{ cms:type:la/b el }}>content'.scan(regex)
     assert_equal nil,                     tokens[0][0]
     assert_equal 'content<',              tokens[0][1]
@@ -57,7 +114,7 @@ class TagTest < ActiveSupport::TestCase
     assert_equal nil,                     tokens[2][0]
     assert_equal '>content',              tokens[2][1]
   end
-  
+
   def test_tokenizer_regex_limit
     string = '<p>text</p>' * 400
     tokens = string.scan(ComfortableMexicanSofa::Tag::TOKENIZER_REGEX)
@@ -65,7 +122,7 @@ class TagTest < ActiveSupport::TestCase
     assert_equal nil, tokens[0][0]
     assert_equal string, tokens[0][1]
   end
-  
+
   def test_content_for_existing_page
     page = comfy_cms_pages(:default)
     assert page.tags.blank?
@@ -79,7 +136,7 @@ class TagTest < ActiveSupport::TestCase
       default_snippet_content
       layout_content_c'
     ), page.render
-    
+
     assert_equal 4, page.tags.size
     assert_equal 'field_text_default_field_text', page.tags[0].id
     assert_equal 'page_text_default_page_text', page.tags[1].id
@@ -87,7 +144,7 @@ class TagTest < ActiveSupport::TestCase
     assert_equal page.tags[1], page.tags[2].parent
     assert_equal 'snippet_default', page.tags[3].id
   end
-  
+
   def test_content_for_new_page
     page = Comfy::Cms::Page.new
     assert page.blocks.blank?
@@ -95,7 +152,7 @@ class TagTest < ActiveSupport::TestCase
     assert_equal '', page.content_cache
     assert page.tags.blank?
   end
-  
+
   def test_content_for_new_page_with_layout
     page = comfy_cms_sites(:default).pages.new(:layout => comfy_cms_layouts(:default))
     assert page.blocks.blank?
@@ -103,18 +160,18 @@ class TagTest < ActiveSupport::TestCase
     assert_equal rendered_content_formatter(
       '
       layout_content_a
-      
+
       layout_content_b
       default_snippet_content
       layout_content_c'
     ), page.render
-    
+
     assert_equal 3, page.tags.size
     assert_equal 'field_text_default_field_text', page.tags[0].id
     assert_equal 'page_text_default_page_text', page.tags[1].id
     assert_equal 'snippet_default', page.tags[2].id
   end
-  
+
   def test_content_for_new_page_with_initilized_comfy_cms_blocks
     page = comfy_cms_sites(:default).pages.new(:layout => comfy_cms_layouts(:default))
     assert page.blocks.blank?
@@ -131,7 +188,7 @@ class TagTest < ActiveSupport::TestCase
       }
     ]
     assert_equal 3, page.blocks.size
-    
+
     assert_equal rendered_content_formatter(
       '
       layout_content_a
@@ -141,7 +198,7 @@ class TagTest < ActiveSupport::TestCase
       default_snippet_content
       layout_content_c'
     ), page.render
-    
+
     assert_equal 4, page.tags.size
     assert_equal 'field_text_default_field_text', page.tags[0].id
     assert_equal 'page_text_default_page_text', page.tags[1].id
@@ -149,12 +206,12 @@ class TagTest < ActiveSupport::TestCase
     assert_equal page.tags[1], page.tags[2].parent
     assert_equal 'snippet_default', page.tags[3].id
   end
-  
+
   def test_content_with_repeated_tags
     page = comfy_cms_pages(:default)
     page.layout.content << "\n{{cms:page:default_page_text:text}}"
     page.layout.save!
-    
+
     assert_equal rendered_content_formatter(
       '
       layout_content_a
@@ -168,7 +225,7 @@ class TagTest < ActiveSupport::TestCase
       default_snippet_content
       default_page_text_content_b'
     ), page.render
-    
+
     assert_equal 6, page.tags.size
     assert_equal 'field_text_default_field_text', page.tags[0].id
     assert_equal 'page_text_default_page_text', page.tags[1].id
@@ -179,7 +236,7 @@ class TagTest < ActiveSupport::TestCase
     assert_equal 'snippet_default', page.tags[5].id
     assert_equal page.tags[4], page.tags[5].parent
   end
-  
+
   def test_content_with_cyclical_tags
     page = comfy_cms_pages(:default)
     snippet = comfy_cms_snippets(:default)
@@ -196,18 +253,18 @@ class TagTest < ActiveSupport::TestCase
     ), page.render
     assert_equal 6, page.tags.size
   end
-  
+
   def test_is_cms_block?
     tag = ComfortableMexicanSofa::Tag::PageText.initialize_tag(
       comfy_cms_pages(:default), '{{ cms:page:content:text }}'
     )
     assert tag.is_cms_block?
-    
+
     tag = ComfortableMexicanSofa::Tag::FieldText.initialize_tag(
       comfy_cms_pages(:default), '{{ cms:field:content:text }}'
     )
     assert tag.is_cms_block?
-    
+
     tag = ComfortableMexicanSofa::Tag::Snippet.initialize_tag(
       comfy_cms_pages(:default), '{{ cms:snippet:label }}'
     )
@@ -218,10 +275,10 @@ class TagTest < ActiveSupport::TestCase
     )
     assert !tag.is_cms_block?
   end
-  
+
   def test_content_with_irb_disabled
     assert_equal false, ComfortableMexicanSofa.config.allow_irb
-    
+
     site = comfy_cms_sites(:default)
     layout = site.layouts.create!(
       :identifier => 'no-irb-layout',
@@ -244,10 +301,10 @@ class TagTest < ActiveSupport::TestCase
     )
     assert_equal "&lt;% 1 + 1 %&gt; text &lt;% 2 + 2 %&gt; snippet &lt;%= 2 + 2 %&gt; <%= render :partial => 'path/to' %> <%= method() %> text <%= render :partial => 'partials/comfy/cms/snippets', :locals => {:model => 'Comfy::Cms::Snippet', :identifier => '#{snippet.id}'} %> &lt;%= 1 + 1 %&gt;", page.content_cache
   end
-  
+
   def test_content_with_irb_enabled
     ComfortableMexicanSofa.config.allow_irb = true
-    
+
     site = comfy_cms_sites(:default)
     layout = site.layouts.create!(
       :identifier => 'irb-layout',
@@ -268,10 +325,10 @@ class TagTest < ActiveSupport::TestCase
           :content    => snippet.id.to_s }
       ]
     )
-    
+
     assert_equal "<% 1 + 1 %> text <% 2 + 2 %> snippet <%= 2 + 2 %> <%= render :partial => 'path/to' %> <%= method() %> text <%= render :partial => 'partials/comfy/cms/snippets', :locals => {:model => 'Comfy::Cms::Snippet', :identifier => '#{snippet.id}'} %> <%= 1 + 1 %>", page.render
   end
-  
+
   def test_escaping_of_parameters
     tag = ComfortableMexicanSofa::Tag::Helper.initialize_tag(
       comfy_cms_pages(:default), '{{cms:helper:h:"\'+User.first.inspect+\'"}}'
@@ -279,31 +336,31 @@ class TagTest < ActiveSupport::TestCase
     assert_equal %{<%= h('\\'+User.first.inspect+\\'') %>}, tag.content
     assert_equal %{<%= h('\\'+User.first.inspect+\\'') %>}, tag.render
   end
-  
+
   def test_tag_initialization_with_namespace
     assert tag = ComfortableMexicanSofa::Tag::PageString.initialize_tag(
       comfy_cms_pages(:default), '{{ cms:page:content:string }}'
     )
     assert_equal 'content', tag.identifier
     assert_equal nil, tag.namespace
-    
+
     assert tag = ComfortableMexicanSofa::Tag::PageString.initialize_tag(
       comfy_cms_pages(:default), '{{ cms:page:home.content:string }}'
     )
     assert_equal 'home.content', tag.identifier
     assert_equal 'home', tag.namespace
-    
+
     assert tag = ComfortableMexicanSofa::Tag::PageString.initialize_tag(
       comfy_cms_pages(:default), '{{ cms:page:home.main.content:string }}'
     )
     assert_equal 'home.main.content', tag.identifier
     assert_equal 'home.main', tag.namespace
-    
+
     assert tag = ComfortableMexicanSofa::Tag::PageString.initialize_tag(
       comfy_cms_pages(:default), '{{ cms:page:ho-me.ma-in.con-tent:string }}'
     )
     assert_equal 'ho-me.ma-in.con-tent', tag.identifier
     assert_equal 'ho-me.ma-in', tag.namespace
   end
-  
+
 end

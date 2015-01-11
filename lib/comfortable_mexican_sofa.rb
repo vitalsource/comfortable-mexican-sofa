@@ -28,7 +28,7 @@ require_relative 'comfortable_mexican_sofa/extensions/is_mirrored'
 require_relative 'comfortable_mexican_sofa/extensions/is_categorized'
 
 Dir.glob(File.expand_path('comfortable_mexican_sofa/tags/*.rb', File.dirname(__FILE__))).each do |path|
-  require_relative path
+  # require_relative path
 end
 
 module ComfortableMexicanSofa
