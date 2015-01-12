@@ -11,11 +11,15 @@ class ComfortableMexicanSofa::Tag
   attr_accessor :options
 
   def self.initialize_tag(tag_signature)
-    if match = tag_signature.match(tag_signature)
-      klass       = match[0]
-      identifier  = match[1]
-      options     = parse_options(match[2].to_s)
-    end
+    return unless match = tag_signature.match(tag_signature)
+
+    klass       = match[0].classify
+    identifier  = match[1]
+    options     = parse_options(match[2].to_s)
+
+    "ComfortableMexicanSofa::Tag::#{klass}".constantize.new(identifier, options)
+  rescue NameError
+    # Unknown Tag class
   end
 
   def initialize(identifier, options = { })
