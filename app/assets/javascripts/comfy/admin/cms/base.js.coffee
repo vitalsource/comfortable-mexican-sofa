@@ -1,36 +1,20 @@
-#= require jquery
-#= require bootstrap-sprockets
-#= require jquery_ujs
-#= require jquery-ui
-#= require tinymce-jquery
-#= require codemirror
-#= require codemirror/modes/css
-#= require codemirror/modes/htmlmixed
-#= require codemirror/modes/javascript
-#= require codemirror/modes/markdown
-#= require codemirror/modes/xml
-#= require codemirror/addons/edit/closetag
-#= require bootstrap
-#= require comfortable_mexican_sofa/lib/bootstrap-datetimepicker
-#= require comfortable_mexican_sofa/lib/diff
-#= require comfortable_mexican_sofa/cms/uploader
-#= require comfortable_mexican_sofa/cms/files
-
 window.CMS ||= {}
 
-window.CMS.current_path           = window.location.pathname
-window.CMS.code_mirror_instances  = [ ]
+window.CMS.code_mirror_instances = [ ]
 
-$ ->
+$(document).on 'page:load ready', ->
+  window.CMS.current_path = window.location.pathname
   CMS.init()
 
 window.CMS.init = ->
+  CMS.set_iframe_layout()
   CMS.slugify()
   CMS.wysiwyg()
   CMS.codemirror()
   CMS.sortable_list()
   CMS.timepicker()
   CMS.page_blocks()
+  CMS.page_file_popovers()
   CMS.mirrors()
   CMS.page_update_preview()
   CMS.page_update_publish()
@@ -54,15 +38,23 @@ window.CMS.slugify = ->
 
 
 window.CMS.wysiwyg = ->
-  tinymce.init
-    selector:         'textarea[data-cms-rich-text]'
-    plugins:          ['link', 'image', 'code', 'autoresize']
-    toolbar:          'undo redo | styleselect | bullist numlist | link unlink image | code'
-    menubar:          false
-    statusbar:        false
-    relative_urls:    false
-    entity_encoding : 'raw'
-    autoresize_bottom_margin : 0
+  csrf_token = $('meta[name=csrf-token]').attr('content')
+  csrf_param = $('meta[name=csrf-param]').attr('content')
+
+  if (csrf_param != undefined && csrf_token != undefined)
+    params = csrf_param + "=" + encodeURIComponent(csrf_token)
+
+  $('textarea.rich-text-editor, textarea[data-cms-rich-text]').redactor
+    minHeight:        160
+    autoresize:       true
+    imageUpload:      "#{CMS.file_upload_path}?source=redactor&type=image&#{params}"
+    imageManagerJson: "#{CMS.file_upload_path}?source=redactor&type=image"
+    fileUpload:       "#{CMS.file_upload_path}?source=redactor&type=file&#{params}"
+    fileManagerJson:  "#{CMS.file_upload_path}?source=redactor&type=file"
+    buttonSource:     true
+    formattingTags:   ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']
+    plugins:          ['imagemanager', 'filemanager', 'table', 'video']
+    lang:             CMS.locale
 
 
 window.CMS.codemirror = ->
@@ -107,13 +99,18 @@ window.CMS.page_blocks = ->
       url: $(this).data('url'),
       data:
         layout_id: $(this).val()
-      beforeSend: ->
-        tinymce.remove()
       complete: ->
         CMS.wysiwyg()
         CMS.timepicker()
         CMS.codemirror()
-        CMS.reinitialize_page_blocks() if CMS.reinitialize_page_blocks?
+        CMS.page_file_popovers()
+
+
+window.CMS.page_file_popovers = ->
+  $('[data-toggle="page-file-popover"]').popover
+    trigger:    'hover'
+    placement:  'top'
+    html:       true
 
 
 window.CMS.mirrors = ->
@@ -162,6 +159,3 @@ window.CMS.set_iframe_layout = ->
   $('body').ready ->
     if in_iframe()
       $('body').addClass('in-iframe')
-
-# Triggering this right away to prevent flicker
-window.CMS.set_iframe_layout()
