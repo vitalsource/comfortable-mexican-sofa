@@ -1,3 +1,49 @@
+# TODO
+
+# runs through the content looking for tag
+class ComfortableMexicanSofa::Content
+
+  def process
+    # runs through content finds tags, initializes them and renders
+  end
+
+end
+
+->
+
+class ComfortableMexicanSofa::TagInitializer
+
+  def initialize_tag(tag_signature)
+    # gets tag class and initializes it with parsed options
+  end
+
+end
+
+->
+
+class ComfortableMexicanSofa::Tag::Block < ComfortableMexicanSofa::Tag
+
+  def initialize(options = {})
+    # ...
+  end
+
+  def admin_form_helper
+    # how to present admin forms
+    # helper, partial. something that's easy to add/replace
+  end
+
+  def render
+    # what and how to render
+  end
+
+  def content
+    # relevant only for block tags
+    # what value to show in the admin
+  end
+
+end
+
+
 # encoding: utf-8
 
 require 'csv'
